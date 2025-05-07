@@ -1,44 +1,133 @@
-@import "tailwindcss";
+/* src/App.css */
+@import 'tailwindcss';
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Custom scrollbar for the chat */
+.scrollbar-light::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.scrollbar-light::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.scrollbar-light::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+.scrollbar-light::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 10px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 10px;
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Animation for the thinking dots */
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
   }
-  to {
-    transform: rotate(360deg);
+  40% {
+    transform: translateY(-5px);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+.animate-bounce {
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+/* Resizable sidebar */
+.sidebar-container {
+  transition: width 0.3s ease-in-out;
+}
+
+/* Make sure the chat message content has proper spacing */
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+
+/* Custom transition for color themes */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* Make sure code blocks in messages look nice */
+pre {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.dark pre {
+  background-color: #0f172a;
+  border: 1px solid #334155;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.875rem;
+}
+
+/* Style for active hover states */
+.hover-active {
+  transition: all 0.2s ease;
+}
+
+.hover-active:active {
+  transform: scale(0.95);
+}
+
+/* Ensure the full screen height works properly */
+html, body, #root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 640px) {
+  .sidebar-container {
+    position: absolute;
+    height: 100%;
+    z-index: 50;
   }
 }
 
-.card {
-  padding: 2em;
+
+/* Estilos para el Toggle Switch del RAG */
+.toggle-checkbox:checked {
+  /* transform: translateX(20px); /* Ajusta esto según el tamaño de tu switch */
+  /* Tailwind peer-checked se puede usar para el label si se estructura diferente,
+     pero aquí usamos JS para posicionar el círculo directamente para mayor control. */
 }
 
-.read-the-docs {
-  color: #888;
+.toggle-checkbox:checked + .toggle-label {
+  /* El color de fondo ya se maneja con clases condicionales en el JSX */
+}
+
+/* Para asegurar que el círculo (thumb) del toggle esté sobre el label (track) */
+.toggle-checkbox {
+  z-index: 1;
 }
