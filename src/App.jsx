@@ -6,15 +6,41 @@ import { ChatProvider } from './context/ChatContext';
 import './App.css';
 
 function App() {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-    const [sidebarWidth, setSidebarWidth] = useState(300); // Default width
-    const [theme, setTheme] = useState('light');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+    const [sidebarWidth, setSidebarWidth] = useState(window.innerWidth >= 1024 ? 320 : 280); // Responsive default width
+    const [theme, setTheme] = useState(
+        window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light'
+    );
     const [isDragging, setIsDragging] = useState(false);
 
     // Toggle theme
     const toggleTheme = () => {
-        setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+        setTheme(prevTheme => {
+            const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+            // Store theme preference
+            localStorage.setItem('aakil-theme', newTheme);
+            // Update body class for global theme
+            if (newTheme === 'dark') {
+                document.body.classList.add('dark');
+            } else {
+                document.body.classList.remove('dark');
+            }
+            return newTheme;
+        });
     };
+
+    // Load saved theme on initial render
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('aakil-theme');
+        if (savedTheme) {
+            setTheme(savedTheme);
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+            }
+        }
+    }, []);
 
     // Toggle sidebar visibility
     const toggleSidebar = () => {
@@ -37,7 +63,7 @@ function App() {
         const newWidth = e.clientX;
 
         // Limit the width between min and max values
-        if (newWidth >= 200 && newWidth <= 500) {
+        if (newWidth >= 240 && newWidth <= 500) {
             setSidebarWidth(newWidth);
         }
     };
@@ -57,18 +83,42 @@ function App() {
         };
     }, [isDragging]);
 
+    // Handle window resize
+    useEffect(() => {
+        const handleResize = () => {
+            if (window.innerWidth < 768 && isSidebarOpen) {
+                // Auto-close sidebar on small screens
+                setIsSidebarOpen(false);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [isSidebarOpen]);
+
     return (
         <ChatProvider>
             <div
                 className={`flex h-screen w-full overflow-hidden ${
-                    theme === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+                    theme === 'dark' ? 'bg-gray-900 text-white dark' : 'bg-gray-50 text-gray-900'
                 } transition-colors duration-300`}
             >
+                {/* Backdrop for mobile sidebar */}
+                {isSidebarOpen && window.innerWidth < 768 && (
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-10"
+                        onClick={toggleSidebar}
+                    ></div>
+                )}
+
                 {/* Chat sidebar - conditionally rendered and sized */}
                 <div
                     className={`sidebar-container h-full ${
                         isSidebarOpen ? 'flex' : 'hidden'
-                    } flex-col bg-opacity-95 z-20 transition-all ease-in-out duration-300 ${
+                    } flex-col bg-opacity-95 ${window.innerWidth < 768 ? 'z-20' : 'z-10'} 
+                    transition-all ease-in-out duration-300 ${
                         theme === 'dark' ? 'bg-gray-800' : 'bg-white'
                     } border-r ${
                         theme === 'dark' ? 'border-gray-700' : 'border-gray-200'

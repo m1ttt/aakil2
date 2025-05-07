@@ -50,10 +50,10 @@ const ChatMain = ({ theme, toggleTheme, toggleSidebar, isSidebarOpen }) => {
 
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${theme === 'dark' ? 'bg-purple-900' : 'bg-purple-100'}`}>
                             <svg className={`w-6 h-6 ${theme === 'dark' ? 'text-purple-300' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                             </svg>
                         </div>
-                        <h1 className={`text-xl md:text-2xl font-medium ${theme === 'dark' ? 'text-white' : 'text-purple-600'}`}>RAG Híbrido</h1>
+                        <h1 className={`text-xl md:text-2xl font-medium ${theme === 'dark' ? 'text-white' : 'text-purple-600'}`}>Aakil</h1>
                     </div>
 
                     <div className="flex items-center space-x-2">
@@ -95,17 +95,17 @@ const ChatMain = ({ theme, toggleTheme, toggleSidebar, isSidebarOpen }) => {
             </header>
 
             {/* Messages area */}
-            <div className={`flex-1 overflow-y-auto p-3 md:p-6 ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+            <div className={`flex-1 overflow-y-auto p-3 md:p-6 ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} ${theme === 'dark' ? 'scrollbar-dark' : 'scrollbar-light'}`}>
                 <div className="max-w-5xl mx-auto">
                     {(!activeConversation || activeConversation.messages.length === 0) ? (
                         <div className="flex flex-col items-center justify-center h-full text-center space-y-6 px-4 py-20">
                             <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center ${theme === 'dark' ? 'bg-purple-900' : 'bg-purple-100'}`}>
                                 <svg className={`w-10 h-10 md:w-12 md:h-12 ${theme === 'dark' ? 'text-purple-300' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                                 </svg>
                             </div>
                             <div>
-                                <p className={`text-xl md:text-2xl font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Asistente RAG Híbrido</p>
+                                <p className={`text-xl md:text-2xl font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>Asistente Aakil</p>
                                 <p className={`mt-2 max-w-lg mx-auto text-base md:text-lg ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
                                     Puedo responder preguntas generales directamente o buscar en fuentes especializadas cuando sea necesario.
                                 </p>
@@ -115,37 +115,37 @@ const ChatMain = ({ theme, toggleTheme, toggleSidebar, isSidebarOpen }) => {
                             <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
                                 <ExampleQuestion
                                     theme={theme}
-                                    text="¿Qué es la criptografía simétrica?"
+                                    text="¿Qué son los patrones de diseño en ingeniería de software?"
                                     icon={
                                         <svg className="w-5 h-5 mr-2 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
                                         </svg>
                                     }
                                 />
                                 <ExampleQuestion
                                     theme={theme}
-                                    text="¿Cómo funciona la arquitectura serverless?"
+                                    text="Explícame el algoritmo de PageRank con un ejemplo"
                                     icon={
                                         <svg className="w-5 h-5 mr-2 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                                         </svg>
                                     }
                                 />
                                 <ExampleQuestion
                                     theme={theme}
-                                    text="¿Cuáles son las mejores prácticas de seguridad para AWS Lambda?"
+                                    text="Compara los modelos de aprendizaje supervisado y no supervisado"
                                     icon={
                                         <svg className="w-5 h-5 mr-2 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
                                         </svg>
                                     }
                                 />
                                 <ExampleQuestion
                                     theme={theme}
-                                    text="Explica la integración de DynamoDB con API Gateway"
+                                    text="Escribe un script en Python para analizar datos CSV con pandas"
                                     icon={
                                         <svg className="w-5 h-5 mr-2 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v12a2 2 0 01-2 2h-5l-5 5v-5z"></path>
                                         </svg>
                                     }
                                 />
@@ -204,10 +204,10 @@ const ExampleQuestion = ({ theme, text, icon }) => {
                     : 'bg-white border border-gray-200 hover:bg-gray-50'
             } shadow-sm`}
         >
-      <span className="flex items-center">
-        {icon}
-          <span className="line-clamp-1">{text}</span>
-      </span>
+            <span className="flex items-center">
+                {icon}
+                <span className="line-clamp-1">{text}</span>
+            </span>
         </button>
     );
 };

@@ -1,5 +1,12 @@
 // src/components/ChatMessage.jsx
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 const ChatMessage = ({ message, theme }) => {
     const [showSources, setShowSources] = useState(true);
@@ -8,10 +15,147 @@ const ChatMessage = ({ message, theme }) => {
         setShowSources(!showSources);
     };
 
+    // Format timestamp
+    const formatTimestamp = (isoString) => {
+        const date = new Date(isoString);
+        return new Intl.DateTimeFormat('es', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(date);
+    };
+
+    // Custom components for ReactMarkdown
+    const components = {
+        code({ node, inline, className, children, ...props }) {
+            const match = /language-(\w+)/.exec(className || '');
+            return !inline && match ? (
+                <SyntaxHighlighter
+                    style={theme === 'dark' ? vscDarkPlus : vs}
+                    language={match[1]}
+                    PreTag="div"
+                    {...props}
+                    customStyle={{
+                        borderRadius: '0.375rem',
+                        fontSize: '0.875rem',
+                        padding: '0.75rem',
+                        marginBottom: '0.75rem',
+                        border: theme === 'dark' ? '1px solid rgb(55, 65, 81)' : '1px solid rgb(229, 231, 235)'
+                    }}
+                >
+                    {String(children).replace(/\n$/, '')}
+                </SyntaxHighlighter>
+            ) : (
+                <code
+                    className={`${inline ? 'px-1 py-0.5 rounded text-sm font-mono' : 'block p-3 rounded-md overflow-x-auto'} ${
+                        theme === 'dark'
+                            ? 'bg-gray-800 text-gray-200'
+                            : 'bg-gray-100 text-gray-800'
+                    }`}
+                    {...props}
+                >
+                    {children}
+                </code>
+            );
+        },
+        p({ children }) {
+            return <p className="mb-2 last:mb-0" style={{ letterSpacing: '-0.01em', lineHeight: '1.4' }}>{children}</p>;
+        },
+        a({ node, children, href, ...props }) {
+            return (
+                <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${theme === 'dark' ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} underline`}
+                    {...props}
+                >
+                    {children}
+                </a>
+            );
+        },
+        ul({ children }) {
+            return <ul className="list-disc pl-5 mb-3" style={{ letterSpacing: '-0.01em' }}>{children}</ul>;
+        },
+        ol({ children }) {
+            return <ol className="list-decimal pl-5 mb-3" style={{ letterSpacing: '-0.01em' }}>{children}</ol>;
+        },
+        li({ children }) {
+            return <li className="mb-0.5" style={{ lineHeight: '1.4' }}>{children}</li>;
+        },
+        blockquote({ children }) {
+            return (
+                <blockquote
+                    className={`border-l-4 pl-3 italic my-2 ${
+                        theme === 'dark'
+                            ? 'border-gray-600 text-gray-300'
+                            : 'border-gray-300 text-gray-700'
+                    }`}
+                    style={{ letterSpacing: '-0.01em', lineHeight: '1.4' }}
+                >
+                    {children}
+                </blockquote>
+            );
+        },
+        table({ children }) {
+            return (
+                <div className="overflow-x-auto my-3">
+                    <table className={`min-w-full border-collapse ${
+                        theme === 'dark'
+                            ? 'border-gray-700'
+                            : 'border-gray-300'
+                    }`} style={{ fontSize: '0.9em' }}>
+                        {children}
+                    </table>
+                </div>
+            );
+        },
+        thead({ children }) {
+            return <thead className={theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'}>{children}</thead>;
+        },
+        th({ children }) {
+            return (
+                <th className={`py-1 px-3 text-left font-semibold ${
+                    theme === 'dark'
+                        ? 'border-gray-700'
+                        : 'border border-gray-300'
+                }`}>
+                    {children}
+                </th>
+            );
+        },
+        td({ children }) {
+            return (
+                <td className={`py-1 px-3 ${
+                    theme === 'dark'
+                        ? 'border-gray-700'
+                        : 'border border-gray-300'
+                }`}>
+                    {children}
+                </td>
+            );
+        },
+        h1({ children }) {
+            return <h1 className="text-2xl font-bold mt-3 mb-2" style={{ letterSpacing: '-0.01em', lineHeight: '1.3' }}>{children}</h1>;
+        },
+        h2({ children }) {
+            return <h2 className="text-xl font-bold mt-3 mb-2" style={{ letterSpacing: '-0.01em', lineHeight: '1.3' }}>{children}</h2>;
+        },
+        h3({ children }) {
+            return <h3 className="text-lg font-bold mt-2 mb-1" style={{ letterSpacing: '-0.01em', lineHeight: '1.3' }}>{children}</h3>;
+        },
+        h4({ children }) {
+            return <h4 className="text-base font-bold mt-2 mb-1" style={{ letterSpacing: '-0.01em', lineHeight: '1.3' }}>{children}</h4>;
+        },
+        hr() {
+            return <hr className={`my-3 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-300'}`} />;
+        }
+    };
+
     return (
-        <div className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+        <div className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-3`}>
             <div
-                className={`rounded-xl p-3 md:p-4 ${
+                className={`rounded-xl p-2.5 md:p-3 relative ${
                     message.type === 'user'
                         ? theme === 'dark'
                             ? 'bg-purple-900 text-white'
@@ -24,41 +168,78 @@ const ChatMessage = ({ message, theme }) => {
                                 ? 'bg-gray-800 border border-gray-700'
                                 : 'bg-white border border-gray-200 shadow-sm'
                 } 
-        ${message.type === 'user' ? 'max-w-[85%] md:max-w-[70%]' : 'max-w-[90%] md:max-w-[80%]'} 
-        ${message.type === 'assistant' ? 'shadow-md' : ''}`}
+                ${message.type === 'user' ? 'max-w-[85%] md:max-w-[70%]' : 'max-w-[90%] md:max-w-[80%]'} 
+                ${message.type === 'assistant' ? 'shadow-md' : ''}`}
             >
-                {message.status === 'thinking' ? (
-                    <div className="flex items-center space-x-2">
-                        <div className={`flex space-x-1 ${theme === 'dark' ? 'text-purple-300' : 'text-purple-600'}`}>
-                            <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                            <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                            <div className="w-2 h-2 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                {/* Message timestamp */}
+                <div className={`absolute top-2 right-3 text-xs ${
+                    message.type === 'user'
+                        ? 'text-purple-200'
+                        : theme === 'dark'
+                            ? 'text-gray-400'
+                            : 'text-gray-500'
+                }`}>
+                    {formatTimestamp(message.timestamp)}
+                </div>
+
+                {message.status === 'thinking' || message.status === 'processing_rag' ? (
+                    <div className="thinking-container">
+                        <div className={`thinking-animation ${theme === 'dark' ? 'dark-theme' : 'light-theme'}`}>
+                            <div className="thinking-dot"></div>
+                            <div className="thinking-dot"></div>
+                            <div className="thinking-dot"></div>
                         </div>
-                        <span className={theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}>Pensando...</span>
+                        <div className="flex items-center">
+                            <svg className={`w-5 h-5 mr-2 thinking-icon ${
+                                theme === 'dark' ? 'text-purple-300' : 'text-purple-600'
+                            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                            </svg>
+                            <span className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
+                                {message.status === 'processing_rag'
+                                    ? 'Buscando en fuentes especializadas...'
+                                    : 'Pensando...'}
+                            </span>
+                        </div>
                     </div>
                 ) : (
                     <div>
-                        <div className="whitespace-pre-wrap break-words">{message.content}</div>
+                        {/* Message content with Markdown */}
+                        <div className="whitespace-pre-wrap break-words mt-3 pr-10 chat-message-content"
+                             style={{ letterSpacing: '-0.01em', lineHeight: '1.4' }}>
+                            {message.type === 'user' ? (
+                                message.content
+                            ) : (
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm, remarkMath]}
+                                    rehypePlugins={[rehypeKatex]}
+                                    components={components}
+                                >
+                                    {message.content}
+                                </ReactMarkdown>
+                            )}
+                        </div>
 
                         {/* Response type indicator */}
                         {message.type === 'assistant' && message.status === 'completed' && (
-                            <div className={`flex items-center justify-between text-xs mt-3 pt-2 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} border-opacity-50`}>
+                            <div className={`flex items-center justify-between text-xs mt-2 pt-1.5 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} border-opacity-50`}>
                                 <div>
                                     {message.responseType === 'DIRECT_LLM' ? (
                                         <span className={`flex items-center ${theme === 'dark' ? 'text-purple-300' : 'text-purple-700'}`}>
-                      <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                      </svg>
-                      Respuesta rápida
-                    </span>
+                                          <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                          </svg>
+                                          Respuesta rápida
+                                        </span>
                                     ) : (
                                         <span className={`flex items-center ${theme === 'dark' ? 'text-blue-300' : 'text-blue-700'}`}>
-                      <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path>
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                      </svg>
-                      Respuesta con fuentes
-                    </span>
+                                          <svg className="w-3 h-3 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16l2.879-2.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z"></path>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                          </svg>
+                                          Respuesta con fuentes
+                                        </span>
                                     )}
                                 </div>
 
@@ -85,31 +266,33 @@ const ChatMessage = ({ message, theme }) => {
                             message.sources &&
                             message.sources.length > 0 &&
                             showSources && (
-                                <div className={`mt-4 pt-3 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-                                    <p className={`text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <div className={`mt-3 pt-2 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                                    <p className={`text-sm font-medium mb-1.5 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
                                         Fuentes ({message.sources.length}):
                                     </p>
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                         {message.sources.map((source, idx) => (
                                             <div
                                                 key={idx}
-                                                className={`text-sm rounded-lg p-3 ${
+                                                className={`text-sm rounded-lg p-2 ${
                                                     theme === 'dark'
                                                         ? 'bg-gray-900 border border-gray-800'
                                                         : 'bg-gray-50 border border-gray-200'
                                                 }`}
+                                                style={{ fontSize: '0.85rem', letterSpacing: '-0.01em' }}
                                             >
-                                                <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
+                                                <div className="flex flex-wrap justify-between items-start gap-2 mb-1">
                                                     <span className="font-medium truncate">{source.source || 'Fuente desconocida'}</span>
-                                                    <span className={`text-xs px-2 py-1 rounded-full ${
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
                                                         theme === 'dark'
                                                             ? 'bg-blue-900 text-blue-200'
                                                             : 'bg-blue-100 text-blue-800'
                                                     }`}>
-                            {typeof source.score === 'number' ? source.score.toFixed(2) : 'N/A'}
-                          </span>
+                                                      {typeof source.score === 'number' ? source.score.toFixed(2) : 'N/A'}
+                                                    </span>
                                                 </div>
-                                                <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} break-words`}>
+                                                <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} break-words`}
+                                                   style={{ lineHeight: '1.3' }}>
                                                     {source.content}
                                                 </p>
                                             </div>

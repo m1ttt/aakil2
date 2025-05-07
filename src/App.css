@@ -1,6 +1,170 @@
 /* src/App.css */
 @import 'tailwindcss';
 
+/* Apply dark mode to body */
+body.dark {
+  background-color: #111827;
+  color: #f9fafb;
+}
+
+/* Ajuste de espaciado para mensajes de chat */
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+  letter-spacing: -0.01em; /* Reducir ligeramente el espacio entre letras */
+  line-height: 1.4; /* Reducir el espaciado vertical entre líneas */
+}
+
+/* Estilos específicos para mensajes del chat */
+.chat-message-content {
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  margin-bottom: 0.5rem; /* Reducir el margen inferior */
+}
+
+/* Animación mejorada para el indicador de "Pensando..." */
+@keyframes pulse-dot {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.thinking-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.thinking-animation {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.thinking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  position: relative;
+}
+
+.thinking-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: pulse-ring 1.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  opacity: 0.3;
+}
+
+.thinking-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.thinking-dot:nth-child(1)::after {
+  animation-delay: 0s;
+}
+
+.thinking-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dot:nth-child(2)::after {
+  animation-delay: 0.2s;
+}
+
+.thinking-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.thinking-dot:nth-child(3)::after {
+  animation-delay: 0.4s;
+}
+
+.thinking-icon {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Colores para tema claro/oscuro */
+.light-theme .thinking-dot {
+  background-color: rgb(147, 51, 234);
+}
+
+.light-theme .thinking-dot::after {
+  background-color: rgb(168, 85, 247);
+}
+
+.dark-theme .thinking-dot {
+  background-color: rgb(216, 180, 254);
+}
+
+.dark-theme .thinking-dot::after {
+  background-color: rgb(192, 132, 252);
+}
+
+/* Ajustes para párrafos dentro de mensajes */
+.markdown-content p {
+  margin-bottom: 0.75rem; /* Reducir el espaciado entre párrafos de 1rem a 0.75rem */
+  letter-spacing: -0.01em;
+}
+
+/* Ajustes para cabeceras */
+.markdown-content h1, .markdown-content h2, .markdown-content h3 {
+  letter-spacing: -0.01em;
+  margin-top: 1rem; /* Reducir el espacio superior de las cabeceras */
+  margin-bottom: 0.5rem; /* Reducir el espacio inferior de las cabeceras */
+}
+
+/* Reducir espacio entre elementos de listas */
+.markdown-content ul, .markdown-content ol {
+  margin-bottom: 0.75rem; /* Reducir el margen inferior */
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem; /* Reducir espaciado entre elementos de lista */
+}
+
 /* Custom scrollbar for the chat */
 .scrollbar-light::-webkit-scrollbar {
   width: 8px;
@@ -40,7 +204,7 @@
   background: #6b7280;
 }
 
-/* Animation for the thinking dots */
+/* Animation for the thinking dots - original */
 @keyframes bounce {
   0%, 80%, 100% {
     transform: translateY(0);
@@ -71,24 +235,123 @@
   transition-duration: 300ms;
 }
 
-/* Make sure code blocks in messages look nice */
-pre {
-  background-color: #1e293b;
-  color: #e2e8f0;
-  padding: 1rem;
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  margin: 1rem 0;
+/* Markdown styling with espaciado reducido */
+.markdown-content h1 {
+  @apply text-2xl font-bold mb-3 mt-4; /* Reducido de mb-4 mt-6 */
 }
 
-.dark pre {
-  background-color: #0f172a;
-  border: 1px solid #334155;
+.markdown-content h2 {
+  @apply text-xl font-bold mb-2 mt-4; /* Reducido de mb-3 mt-5 */
 }
 
-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 0.875rem;
+.markdown-content h3 {
+  @apply text-lg font-bold mb-2 mt-3; /* Reducido de mb-2 mt-4 */
+}
+
+.markdown-content h4 {
+  @apply text-base font-bold mb-1 mt-2; /* Reducido de mb-2 mt-3 */
+}
+
+.markdown-content p {
+  @apply mb-3; /* Reducido de mb-4 */
+}
+
+.markdown-content ul {
+  @apply list-disc pl-5 mb-3; /* Reducido de mb-4 */
+}
+
+.markdown-content ol {
+  @apply list-decimal pl-5 mb-3; /* Reducido de mb-4 */
+}
+
+.markdown-content li {
+  @apply mb-1;
+}
+
+.dark .markdown-content blockquote {
+  @apply border-l-4 border-gray-600 pl-4 italic my-3 text-gray-300; /* Reducido de my-4 */
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-gray-300 pl-4 italic my-3 text-gray-700; /* Reducido de my-4 */
+}
+
+.markdown-content table {
+  @apply min-w-full border-collapse my-3; /* Reducido de my-4 */
+}
+
+.dark .markdown-content table {
+  @apply border-gray-700;
+}
+
+.markdown-content table {
+  @apply border-gray-300;
+}
+
+.dark .markdown-content thead {
+  @apply bg-gray-800;
+}
+
+.markdown-content thead {
+  @apply bg-gray-100;
+}
+
+.dark .markdown-content th {
+  @apply py-1 px-3 text-left font-semibold border-gray-700; /* Reducido de py-2 px-4 */
+}
+
+.markdown-content th {
+  @apply py-1 px-3 text-left font-semibold border border-gray-300; /* Reducido de py-2 px-4 */
+}
+
+.dark .markdown-content td {
+  @apply py-1 px-3 border-gray-700; /* Reducido de py-2 px-4 */
+}
+
+.markdown-content td {
+  @apply py-1 px-3 border border-gray-300; /* Reducido de py-2 px-4 */
+}
+
+.dark .markdown-content hr {
+  @apply my-3 border-gray-700; /* Reducido de my-4 */
+}
+
+.markdown-content hr {
+  @apply my-3 border-gray-300; /* Reducido de my-4 */
+}
+
+.dark .markdown-content a {
+  @apply text-blue-400 hover:text-blue-300 underline;
+}
+
+.markdown-content a {
+  @apply text-blue-600 hover:text-blue-800 underline;
+}
+
+/* Style for inline code */
+.markdown-content :not(pre) > code {
+  @apply px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.dark .markdown-content :not(pre) > code {
+  @apply bg-gray-800 text-gray-200;
+}
+
+.markdown-content :not(pre) > code {
+  @apply bg-gray-100 text-gray-800;
+}
+
+/* Style for code blocks */
+.markdown-content pre {
+  @apply block p-3 rounded-md overflow-x-auto mb-3; /* Reducido de p-4 mb-4 */
+}
+
+.dark .markdown-content pre {
+  @apply bg-gray-800 border border-gray-700;
+}
+
+.markdown-content pre {
+  @apply bg-gray-50 border border-gray-200;
 }
 
 /* Style for active hover states */
@@ -115,7 +378,6 @@ html, body, #root {
   }
 }
 
-
 /* Estilos para el Toggle Switch del RAG */
 .toggle-checkbox:checked {
   /* transform: translateX(20px); /* Ajusta esto según el tamaño de tu switch */
@@ -130,4 +392,12 @@ html, body, #root {
 /* Para asegurar que el círculo (thumb) del toggle esté sobre el label (track) */
 .toggle-checkbox {
   z-index: 1;
+}
+
+/* KaTeX math styling from KaTeX package */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
 }

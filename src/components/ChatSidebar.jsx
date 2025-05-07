@@ -14,15 +14,41 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
 
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState('');
+    const [hoveredId, setHoveredId] = useState(null);
 
     // Format date for display
     const formatDate = (dateString) => {
         const date = new Date(dateString);
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        // Same day
+        if (date.toDateString() === now.toDateString()) {
+            return date.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        // Yesterday
+        if (date.toDateString() === yesterday.toDateString()) {
+            return 'Ayer, ' + date.toLocaleTimeString(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+        }
+
+        // This week or earlier
         return date.toLocaleDateString(undefined, {
+            weekday: 'short',
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         });
     };
 
@@ -70,7 +96,7 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
                 <div className="flex">
                     <button
                         onClick={createNewConversation}
-                        className={`mr-2 p-2 rounded-full ${
+                        className={`mr-2 p-2 rounded-full hover-active ${
                             theme === 'dark'
                                 ? 'bg-gray-700 hover:bg-gray-600 text-purple-300'
                                 : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
@@ -84,7 +110,7 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
                     </button>
                     <button
                         onClick={toggleSidebar}
-                        className={`p-2 rounded-full md:hidden ${
+                        className={`p-2 rounded-full md:hidden hover-active ${
                             theme === 'dark'
                                 ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
                                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
@@ -100,7 +126,7 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
             </div>
 
             {/* Conversations list */}
-            <div className="flex-1 overflow-y-auto py-2">
+            <div className="flex-1 overflow-y-auto py-2 scrollbar-light">
                 {conversations.length === 0 ? (
                     <div className="px-4 py-8 text-center">
                         <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -112,7 +138,7 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
                                 theme === 'dark'
                                     ? 'bg-purple-700 hover:bg-purple-600 text-white'
                                     : 'bg-purple-600 hover:bg-purple-700 text-white'
-                            } transition-colors`}
+                            } transition-colors hover-active`}
                         >
                             Iniciar nueva conversación
                         </button>
@@ -120,7 +146,10 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
                 ) : (
                     <ul className="space-y-1 px-2">
                         {conversations.map(conv => (
-                            <li key={conv.id}>
+                            <li key={conv.id}
+                                onMouseEnter={() => setHoveredId(conv.id)}
+                                onMouseLeave={() => setHoveredId(null)}
+                            >
                                 <div
                                     className={`flex items-center p-3 rounded-lg cursor-pointer group ${
                                         activeConversationId === conv.id
@@ -130,7 +159,7 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
                                             : theme === 'dark'
                                                 ? 'hover:bg-gray-700'
                                                 : 'hover:bg-gray-100'
-                                    } transition-colors`}
+                                    } transition-colors hover-active`}
                                     onClick={() => setActiveConversationId(conv.id)}
                                 >
                                     <div className="flex-1 min-w-0">
@@ -177,9 +206,12 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
 
                                     {/* Action buttons */}
                                     {!editingId && (
-                                        <div className={`ml-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ${
-                                            activeConversationId === conv.id ? 'opacity-100' : ''
-                                        }`}>
+                                        <div className={`ml-2 flex space-x-1 ${
+                                            activeConversationId === conv.id || hoveredId === conv.id
+                                                ? 'opacity-100'
+                                                : 'opacity-0 group-hover:opacity-100'
+                                        } transition-opacity`}
+                                        >
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -225,9 +257,9 @@ const ChatSidebar = ({ theme, toggleSidebar }) => {
                 <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                     <p className="flex items-center">
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                         </svg>
-                        RAG Híbrido - LLM y búsqueda especializada
+                        Aakil - Asistente IA avanzado
                     </p>
                 </div>
             </div>

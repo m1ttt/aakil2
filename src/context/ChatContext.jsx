@@ -28,14 +28,61 @@ const removeThinkingBlock = (responseText) => {
     return responseText;
 };
 
+// Helper to format code blocks correctly for markdown
+const formatForMarkdown = (text) => {
+    if (typeof text !== 'string') return text;
+
+    // Check if we already have proper markdown code blocks
+    if (text.includes('```')) return text;
+
+    // Add proper markdown code blocks for standard <code> tags
+    let formattedText = text.replace(/<code>([\s\S]*?)<\/code>/g, (match, codeContent) => {
+        // Detect language from content or default to text
+        let language = 'text';
+        if (codeContent.includes('function') || codeContent.includes('const ') || codeContent.includes('var ')) {
+            language = 'javascript';
+        } else if (codeContent.includes('import pandas') || codeContent.includes('def ')) {
+            language = 'python';
+        } else if (codeContent.includes('<html>') || codeContent.includes('<div>')) {
+            language = 'html';
+        } else if (codeContent.includes('SELECT ') || codeContent.includes('FROM ')) {
+            language = 'sql';
+        }
+
+        return `\`\`\`${language}\n${codeContent}\n\`\`\``;
+    });
+
+    return formattedText;
+};
 
 export const ChatProvider = ({ children }) => {
     // States
     const [query, setQuery] = useState('');
-    const [conversations, setConversations] = useState([
-        { id: 'current', name: 'Nueva conversación', messages: [], lastUpdated: new Date().toISOString() }
-    ]);
-    const [activeConversationId, setActiveConversationId] = useState('current');
+    const [conversations, setConversations] = useState(() => {
+        // Try to load conversations from localStorage
+        const savedConversations = localStorage.getItem('aakil-conversations');
+        if (savedConversations) {
+            try {
+                return JSON.parse(savedConversations);
+            } catch (e) {
+                console.error("Failed to parse saved conversations:", e);
+            }
+        }
+        // Default if no saved conversations
+        return [
+            { id: 'current', name: 'Nueva conversación', messages: [], lastUpdated: new Date().toISOString() }
+        ];
+    });
+
+    const [activeConversationId, setActiveConversationId] = useState(() => {
+        // Try to load active conversation ID from localStorage
+        const savedId = localStorage.getItem('aakil-active-conversation');
+        if (savedId) {
+            return savedId;
+        }
+        return 'current';
+    });
+
     const [sessionId, setSessionId] = useState('web-' + Date.now());
     const [taskId, setTaskId] = useState(null);
     const [status, setStatus] = useState('IDLE'); // IDLE, PENDING, PROCESSING, COMPLETED, FAILED
@@ -48,6 +95,16 @@ export const ChatProvider = ({ children }) => {
 
     // Get active conversation
     const activeConversation = conversations.find(c => c.id === activeConversationId) || conversations[0];
+
+    // Save conversations to localStorage when they change
+    useEffect(() => {
+        localStorage.setItem('aakil-conversations', JSON.stringify(conversations));
+    }, [conversations]);
+
+    // Save active conversation ID to localStorage when it changes
+    useEffect(() => {
+        localStorage.setItem('aakil-active-conversation', activeConversationId);
+    }, [activeConversationId]);
 
     // Reset state for a new query
     const resetQueryState = () => {
@@ -70,15 +127,14 @@ export const ChatProvider = ({ children }) => {
         setConversations(prev => [newConversation, ...prev].sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated)));
         setActiveConversationId(newId);
         resetQueryState();
-        // setUseRAG(true); // Optionally reset RAG preference for new conversations
     };
 
     // Update conversation name
     const updateConversationName = (id, name) => {
         setConversations(prev =>
             prev.map(conv =>
-                conv.id === id ? { ...conv, name } : conv
-            )
+                conv.id === id ? { ...conv, name, lastUpdated: new Date().toISOString() } : conv
+            ).sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated))
         );
     };
 
@@ -127,7 +183,12 @@ export const ChatProvider = ({ children }) => {
                     ? {
                         ...conv,
                         messages: conv.messages.map((msg, idx) =>
-                            idx === messageIndex ? { ...msg, ...updates } : msg
+                            idx === messageIndex ? {
+                                ...msg,
+                                ...updates,
+                                // If updating content, format it for Markdown if needed
+                                ...(updates.content ? { content: formatForMarkdown(updates.content) } : {})
+                            } : msg
                         ),
                         lastUpdated: new Date().toISOString() // Also update lastUpdated time here
                     }
@@ -169,7 +230,6 @@ export const ChatProvider = ({ children }) => {
         };
         addMessage(pendingMessage);
 
-
         try {
             const payload = {
                 query: queryText,
@@ -190,8 +250,10 @@ export const ChatProvider = ({ children }) => {
             if (response.status === 200 && data.response) { // Direct response (simulating useRAG: false)
                 setStatus('COMPLETED');
                 const finalResponseText = removeThinkingBlock(data.response);
+                const formattedResponse = formatForMarkdown(finalResponseText);
+
                 updateMessage(pendingMessageIndex, {
-                    content: finalResponseText,
+                    content: formattedResponse,
                     sources: data.sources || [],
                     status: 'completed',
                     responseType: data.responseType || 'DIRECT_LLM'
@@ -234,9 +296,6 @@ export const ChatProvider = ({ children }) => {
             const data = await response.json();
             console.log(`Poll response for ${currentTaskId}:`, data);
 
-            // Update global status based on polling response
-            // setStatus(data.status); // This might be too broad, let specific handlers do it.
-
             if (response.ok) {
                 if (data.status === 'COMPLETED') {
                     stopPolling();
@@ -246,9 +305,14 @@ export const ChatProvider = ({ children }) => {
                     if (!parsedResult || typeof parsedResult.response === 'undefined') {
                         throw new Error("El formato de resultData de RAG no es el esperado o no contiene 'response'.");
                     }
+
                     setResultData(parsedResult); // Store full result if needed
+
+                    // Format response for markdown rendering
+                    const formattedResponse = formatForMarkdown(parsedResult.response);
+
                     updateMessage(messageIndex, {
-                        content: parsedResult.response,
+                        content: formattedResponse,
                         sources: parsedResult.sources || [],
                         status: 'completed',
                         responseType: parsedResult.responseType || 'RAG'
@@ -275,16 +339,6 @@ export const ChatProvider = ({ children }) => {
             console.error(`Error polling for ${currentTaskId}:`, err);
             // Don't stop polling on intermittent network errors, but log them.
             // If it's a persistent error, it might be caught by max retries or timeout elsewhere.
-            // For now, we'll mark the message as error if polling itself fails critically.
-            // However, if the task is still genuinely processing, this might be premature.
-            // A more robust solution would have retry logic for polling.
-            setError(`Error al verificar el estado: ${err.message}`);
-            // To avoid overwriting a "PROCESSING" state with a temporary poll error:
-            // Only set to FAILED if the error is definitive or after retries.
-            // For now, if a poll request fails, we might want to just log it and let the next poll try.
-            // However, if stopPolling() is called, we need to reflect that.
-            // Let's update the message only if we decide to stop polling due to this error.
-            // For now, we keep polling unless it's a definitive FAILED status from backend.
         }
     };
 
@@ -299,7 +353,7 @@ export const ChatProvider = ({ children }) => {
             } else {
                 stopPolling(); // Stop if global status is COMPLETED or FAILED
             }
-        }, 5000); // Poll every 5 seconds
+        }, 3000); // Poll every 3 seconds
     };
 
     const stopPolling = () => {
@@ -316,12 +370,6 @@ export const ChatProvider = ({ children }) => {
             stopPolling();
         };
     }, []);
-
-    // Effect to sort conversations whenever they change.
-    // This is now handled within addMessage and updateMessage to ensure sorting happens right after modification.
-    // useEffect(() => {
-    //     setConversations(prev => [...prev].sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated)));
-    // }, [conversations.map(c => c.lastUpdated).join(',')]); // Simple dependency to re-run on relevant changes
 
     const contextValue = {
         query,

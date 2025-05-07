@@ -8,10 +8,11 @@ const ChatInput = ({ theme }) => {
         setQuery,
         handleSubmitQuery,
         status,
-        useRAG,      // Obtener useRAG del contexto
-        setUseRAG    // Obtener setUseRAG del contexto
+        useRAG,
+        setUseRAG
     } = useContext(ChatContext);
     const textareaRef = useRef(null);
+    const [isComposing, setIsComposing] = useState(false);
 
     // Adjust textarea height based on content
     const adjustTextareaHeight = () => {
@@ -48,15 +49,14 @@ const ChatInput = ({ theme }) => {
         if (!query.trim() || status === 'PENDING' || status === 'PROCESSING') {
             return;
         }
-        // Pasar el estado actual de useRAG a handleSubmitQuery
         handleSubmitQuery(query, useRAG);
-        // No es necesario limpiar el query aquí si handleSubmitQuery lo hace.
-        // Si handleSubmitQuery no limpia el query, entonces setQuery('') iría aquí.
-        // En el ChatContext modificado, setQuery('') ya está en handleSubmitQuery.
     };
 
     // Handle key press (Enter to submit, Shift+Enter for new line)
     const handleKeyPress = (e) => {
+        // Don't trigger submit during IME composition (for languages like Chinese, Japanese, etc.)
+        if (isComposing) return;
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             onSubmit(e);
@@ -73,7 +73,7 @@ const ChatInput = ({ theme }) => {
                         theme === 'dark' ? 'text-gray-400 hover:text-gray-300' : 'text-gray-500 hover:text-gray-700'
                     } transition-colors`}
                 >
-                    Usar fuentes especializadas (RAG):
+                    Usar fuentes especializadas:
                 </label>
                 <div className="relative inline-block w-10 ml-2 align-middle select-none transition duration-200 ease-in">
                     <input
@@ -106,6 +106,8 @@ const ChatInput = ({ theme }) => {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                         onKeyDown={handleKeyPress}
+                        onCompositionStart={() => setIsComposing(true)}
+                        onCompositionEnd={() => setIsComposing(false)}
                         rows={1} // Start with 1 row, will auto-adjust
                         className={`w-full resize-none rounded-2xl py-3 pl-4 pr-12 text-sm md:text-base transition focus:outline-none ${
                             theme === 'dark'
@@ -118,7 +120,7 @@ const ChatInput = ({ theme }) => {
                     <div className={`absolute right-4 bottom-3 text-xs hidden sm:block ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                         {status === 'PENDING' || status === 'PROCESSING'
                             ? 'Procesando...'
-                            : 'Enter para enviar'}
+                            : 'Enter ↵'}
                     </div>
                 </div>
                 <button
@@ -140,6 +142,13 @@ const ChatInput = ({ theme }) => {
                     </svg>
                 </button>
             </form>
+
+            {/* Typing status indicator */}
+            {status === 'PENDING' || status === 'PROCESSING' ? (
+                <div className={`text-xs mt-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} text-center sm:text-right animate-pulse`}>
+                    Aakil está escribiendo...
+                </div>
+            ) : null}
         </div>
     );
 };
