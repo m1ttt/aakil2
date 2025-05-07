@@ -1,5 +1,5 @@
 // src/App.jsx - Main application component
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Asegúrate que useEffect esté importado
 import ChatSidebar from './components/ChatSidebar';
 import ChatMain from './components/ChatMain';
 import { ChatProvider } from './context/ChatContext';
@@ -15,13 +15,19 @@ function App() {
     );
     const [isDragging, setIsDragging] = useState(false);
 
+    // ADDED: Log para montaje y desmontaje de App.jsx
+    useEffect(() => {
+        console.log("App.jsx: Componente MONTADO");
+        return () => {
+            console.log("App.jsx: Componente DESMONTANDOSE!");
+        };
+    }, []); // Array vacío para que se ejecute solo al montar y desmontar
+
     // Toggle theme
     const toggleTheme = () => {
         setTheme(prevTheme => {
             const newTheme = prevTheme === 'light' ? 'dark' : 'light';
-            // Store theme preference
             localStorage.setItem('aakil-theme', newTheme);
-            // Update body class for global theme
             if (newTheme === 'dark') {
                 document.body.classList.add('dark');
             } else {
@@ -39,8 +45,14 @@ function App() {
             if (savedTheme === 'dark') {
                 document.body.classList.add('dark');
             }
+        } else { // Si no hay tema guardado, aplicar el detectado o default al body
+            if (theme === 'dark') {
+                document.body.classList.add('dark');
+            } else {
+                document.body.classList.remove('dark');
+            }
         }
-    }, []);
+    }, [theme]); // Dependencia en theme para aplicar al body si cambia por detección inicial
 
     // Toggle sidebar visibility
     const toggleSidebar = () => {
@@ -51,52 +63,58 @@ function App() {
     const handleMouseDown = (e) => {
         e.preventDefault();
         setIsDragging(true);
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
+        // Los listeners se añaden aquí para que solo estén activos durante el drag
     };
 
     // Handle mouse move for resizing
     const handleMouseMove = (e) => {
         if (!isDragging) return;
-
-        // Calculate new width based on mouse position
         const newWidth = e.clientX;
-
-        // Limit the width between min and max values
-        if (newWidth >= 240 && newWidth <= 500) {
+        if (newWidth >= 240 && newWidth <= 500) { // Limitar el ancho
             setSidebarWidth(newWidth);
         }
     };
 
     // Handle mouse up to stop resizing
     const handleMouseUp = () => {
-        setIsDragging(false);
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        if (isDragging) {
+            setIsDragging(false);
+        }
     };
 
-    // Clean up event listeners on unmount
+    // Efecto para añadir/quitar listeners de mousemove y mouseup
     useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        } else {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        }
+        // Cleanup: asegurar que se quitan los listeners si el componente se desmonta mientras isDragging es true
         return () => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging]);
+    }, [isDragging]); // Dependencia en isDragging
 
-    // Handle window resize
+    // Handle window resize for auto-closing sidebar on small screens
     useEffect(() => {
-        const handleResize = () => {
+        const handleWindowResize = () => {
             if (window.innerWidth < 768 && isSidebarOpen) {
-                // Auto-close sidebar on small screens
                 setIsSidebarOpen(false);
+            } else if (window.innerWidth >= 768 && !isSidebarOpen && !isDragging) {
+                // Opcional: Reabrir sidebar en pantallas grandes si se redimensiona y no estaba abierta
+                // Podrías querer una lógica más específica aquí, o basarte en un estado guardado
+                // setIsSidebarOpen(true);
             }
         };
 
-        window.addEventListener('resize', handleResize);
+        window.addEventListener('resize', handleWindowResize);
         return () => {
-            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('resize', handleWindowResize);
         };
-    }, [isSidebarOpen]);
+    }, [isSidebarOpen, isDragging]); // Añadido isDragging para evitar comportamientos extraños durante el resize del sidebar
 
     return (
         <ChatProvider>
@@ -108,7 +126,7 @@ function App() {
                 {/* Backdrop for mobile sidebar */}
                 {isSidebarOpen && window.innerWidth < 768 && (
                     <div
-                        className="fixed inset-0 bg-black bg-opacity-50 z-10"
+                        className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden" // Asegurar que solo aparezca en móviles
                         onClick={toggleSidebar}
                     ></div>
                 )}
@@ -117,29 +135,30 @@ function App() {
                 <div
                     className={`sidebar-container h-full ${
                         isSidebarOpen ? 'flex' : 'hidden'
-                    } flex-col bg-opacity-95 ${window.innerWidth < 768 ? 'z-20' : 'z-10'} 
+                    } md:flex flex-col bg-opacity-95 ${window.innerWidth < 768 ? 'fixed z-40' : 'relative z-10'} 
                     transition-all ease-in-out duration-300 ${
                         theme === 'dark' ? 'bg-gray-800' : 'bg-white'
                     } border-r ${
                         theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
-                    } shadow-md`}
+                    } shadow-lg md:shadow-md`} // Sombra más pronunciada en móvil
                     style={{ width: `${sidebarWidth}px` }}
                 >
                     <ChatSidebar
                         theme={theme}
-                        toggleSidebar={toggleSidebar}
+                        toggleSidebar={toggleSidebar} // Pasar para el botón de cerrar en el sidebar
                     />
                 </div>
 
-                {/* Resizer */}
-                {isSidebarOpen && (
+                {/* Resizer - debería ocultarse en móvil o si el sidebar está cerrado */}
+                {isSidebarOpen && window.innerWidth >= 768 && (
                     <div
-                        className={`h-full w-1 cursor-col-resize ${
-                            theme === 'dark' ? 'bg-gray-700 hover:bg-purple-700' : 'bg-gray-200 hover:bg-purple-500'
+                        className={`h-full w-1.5 cursor-col-resize select-none ${
+                            theme === 'dark' ? 'bg-gray-700 hover:bg-purple-700' : 'bg-gray-300 hover:bg-purple-500'
                         } transition-colors duration-200 z-30 ${
                             isDragging ? (theme === 'dark' ? 'bg-purple-700' : 'bg-purple-500') : ''
                         }`}
                         onMouseDown={handleMouseDown}
+                        title="Arrastra para redimensionar"
                     />
                 )}
 

@@ -90,8 +90,16 @@ export const ChatProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const [useRAG, setUseRAG] = useState(true); // User can toggle this via UI
 
-    // References
-    const intervalRef = useRef(null);
+    // Referencias globales para polling
+    const pollingRef = useRef({
+        active: false,
+        taskId: null,
+        timer: null,
+        messageIndex: null,
+        originalQuery: null,
+        retryCount: 0,
+        maxRetries: 30  // 5 minutos a 3 segundos por intento
+    });
 
     // Get active conversation
     const activeConversation = conversations.find(c => c.id === activeConversationId) || conversations[0];
@@ -197,6 +205,121 @@ export const ChatProvider = ({ children }) => {
         );
     };
 
+    // Detener polling existente
+    const stopPolling = () => {
+        if (pollingRef.current.timer) {
+            clearInterval(pollingRef.current.timer);
+            pollingRef.current.timer = null;
+        }
+        pollingRef.current.active = false;
+        pollingRef.current.taskId = null;
+        pollingRef.current.messageIndex = null;
+        pollingRef.current.originalQuery = null;
+        pollingRef.current.retryCount = 0;
+        console.log("Polling stopped");
+    };
+
+    // Poll for results - versión simple
+    const pollForResult = async () => {
+        // Si no hay polling activo, salir
+        if (!pollingRef.current.active || !pollingRef.current.taskId) return;
+
+        const currentTaskId = pollingRef.current.taskId;
+        const messageIndex = pollingRef.current.messageIndex;
+
+        try {
+            console.log(`Making poll request for ${currentTaskId}`);
+            const response = await fetch(`${RESULTS_BASE_URL}/${currentTaskId}`, { method: 'GET' });
+            const data = await response.json();
+            console.log(`Poll response for ${currentTaskId}:`, data);
+
+            // Incrementar contador de reintentos
+            pollingRef.current.retryCount++;
+
+            // Comprobar si hemos excedido los reintentos máximos
+            if (pollingRef.current.retryCount > pollingRef.current.maxRetries) {
+                console.log("Maximum retry count exceeded, stopping polling");
+                stopPolling();
+                setStatus('FAILED');
+                updateMessage(messageIndex, {
+                    content: "La solicitud ha excedido el tiempo máximo de espera. Por favor, inténtalo de nuevo.",
+                    status: 'error',
+                    responseType: 'ERROR'
+                });
+                return;
+            }
+
+            if (response.ok) {
+                if (data.status === 'COMPLETED') {
+                    console.log("Task COMPLETED, processing result");
+                    stopPolling();
+                    setStatus('COMPLETED');
+
+                    const parsedResult = typeof data.resultData === 'string' ? JSON.parse(data.resultData) : data.resultData;
+                    console.log("Parsed result:", parsedResult);
+
+                    if (!parsedResult || typeof parsedResult.response === 'undefined') {
+                        throw new Error("El formato de resultData de RAG no es el esperado o no contiene 'response'.");
+                    }
+
+                    setResultData(parsedResult);
+
+                    // Format response for markdown rendering
+                    const formattedResponse = formatForMarkdown(parsedResult.response);
+
+                    updateMessage(messageIndex, {
+                        content: formattedResponse,
+                        sources: parsedResult.sources || [],
+                        status: 'completed',
+                        responseType: parsedResult.responseType || 'RAG'
+                    });
+                } else if (data.status === 'FAILED') {
+                    console.log("Task FAILED");
+                    stopPolling();
+                    setStatus('FAILED');
+                    const errorDetails = data.errorDetails || 'La tarea RAG falló en el backend.';
+                    setError(errorDetails);
+                    updateMessage(messageIndex, {
+                        content: errorDetails,
+                        status: 'error',
+                        responseType: 'ERROR'
+                    });
+                } else if (data.status === 'PROCESSING' || data.status === 'PENDING') {
+                    console.log(`Task still ${data.status}, continuing polling`);
+                    setStatus(data.status);
+                    // Continuar polling automáticamente en el intervalo
+                }
+            } else {
+                console.error(`Error response from API: ${response.status}`);
+                // No detenemos el polling por errores temporales, permitimos reintentos
+            }
+        } catch (err) {
+            console.error(`Error polling for ${currentTaskId}:`, err);
+            // No detenemos el polling por errores de red, permitimos reintentos
+        }
+    };
+
+    // Iniciar polling simplificado
+    const startPolling = (taskId, messageIndex, originalQuery) => {
+        // Detener cualquier polling existente
+        stopPolling();
+
+        console.log(`Starting polling for task ${taskId}`);
+
+        // Configurar el polling
+        pollingRef.current.active = true;
+        pollingRef.current.taskId = taskId;
+        pollingRef.current.messageIndex = messageIndex;
+        pollingRef.current.originalQuery = originalQuery;
+        pollingRef.current.retryCount = 0;
+
+        // Primera llamada inmediata
+        pollForResult();
+
+        // Configurar el intervalo para llamadas periódicas
+        pollingRef.current.timer = setInterval(pollForResult, 3000);
+    };
+
     // Handle submit query
     const handleSubmitQuery = async (queryText, ragEnabled = useRAG) => {
         if (!queryText.trim() || status === 'PENDING' || status === 'PROCESSING') {
@@ -268,7 +391,7 @@ export const ChatProvider = ({ children }) => {
                     responseType: data.responseType || 'RAG_PENDING',
                     taskId: data.taskId // Store taskId with the message if useful
                 });
-                startPolling(data.taskId, pendingMessageIndex);
+                startPolling(data.taskId, pendingMessageIndex, queryText);
             } else {
                 const errorMessage = data.error || data.message || `Error ${response.status} al procesar la consulta.`;
                 throw new Error(errorMessage);
@@ -286,88 +409,11 @@ export const ChatProvider = ({ children }) => {
         setQuery(''); // Clear input field
     };
 
-    // Poll for results
-    const pollForResult = async (currentTaskId, messageIndex) => {
-        if (!currentTaskId) return;
-        console.log(`Polling for taskId: ${currentTaskId}, messageIndex: ${messageIndex}`);
-
-        try {
-            const response = await fetch(`${RESULTS_BASE_URL}/${currentTaskId}`, { method: 'GET' });
-            const data = await response.json();
-            console.log(`Poll response for ${currentTaskId}:`, data);
-
-            if (response.ok) {
-                if (data.status === 'COMPLETED') {
-                    stopPolling();
-                    setStatus('COMPLETED'); // Global status
-                    const parsedResult = typeof data.resultData === 'string' ? JSON.parse(data.resultData) : data.resultData;
-
-                    if (!parsedResult || typeof parsedResult.response === 'undefined') {
-                        throw new Error("El formato de resultData de RAG no es el esperado o no contiene 'response'.");
-                    }
-
-                    setResultData(parsedResult); // Store full result if needed
-
-                    // Format response for markdown rendering
-                    const formattedResponse = formatForMarkdown(parsedResult.response);
-
-                    updateMessage(messageIndex, {
-                        content: formattedResponse,
-                        sources: parsedResult.sources || [],
-                        status: 'completed',
-                        responseType: parsedResult.responseType || 'RAG'
-                    });
-                } else if (data.status === 'FAILED') {
-                    stopPolling();
-                    setStatus('FAILED'); // Global status
-                    const errorDetails = data.errorDetails || 'La tarea RAG falló en el backend.';
-                    setError(errorDetails);
-                    updateMessage(messageIndex, {
-                        content: errorDetails,
-                        status: 'error',
-                        responseType: 'ERROR'
-                    });
-                } else if (data.status === 'PROCESSING' || data.status === 'PENDING') {
-                    setStatus(data.status); // Keep global status updated
-                    // Message is already showing "processing..."
-                    // No need to update message content here, just continue polling.
-                }
-            } else {
-                throw new Error(data.error || data.message || `Error ${response.status} al obtener resultados del polling.`);
-            }
-        } catch (err) {
-            console.error(`Error polling for ${currentTaskId}:`, err);
-            // Don't stop polling on intermittent network errors, but log them.
-            // If it's a persistent error, it might be caught by max retries or timeout elsewhere.
-        }
-    };
-
-    const startPolling = (currentTaskId, messageIndex) => {
-        stopPolling(); // Clear any existing interval
-        pollForResult(currentTaskId, messageIndex); // Initial immediate poll
-
-        intervalRef.current = setInterval(() => {
-            // Only continue polling if the global status suggests the task might still be active
-            if (status === 'PROCESSING' || status === 'PENDING') {
-                pollForResult(currentTaskId, messageIndex);
-            } else {
-                stopPolling(); // Stop if global status is COMPLETED or FAILED
-            }
-        }, 3000); // Poll every 3 seconds
-    };
-
-    const stopPolling = () => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-            console.log("Polling stopped.");
-        }
-    };
-
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            stopPolling();
+            console.log("Component unmounting, but polling will continue if active");
+            // No detenemos el polling aquí para permitir que continúe incluso cuando los componentes se desmontan
         };
     }, []);
 
@@ -385,8 +431,8 @@ export const ChatProvider = ({ children }) => {
         createNewConversation,
         updateConversationName,
         deleteConversation,
-        useRAG,      // Expose RAG state
-        setUseRAG    // Expose RAG setter
+        useRAG,
+        setUseRAG
     };
 
     return (

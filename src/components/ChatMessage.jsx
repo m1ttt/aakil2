@@ -10,10 +10,44 @@ import 'katex/dist/katex.min.css';
 
 const ChatMessage = ({ message, theme }) => {
     const [showSources, setShowSources] = useState(true);
+    const [showThinking, setShowThinking] = useState(false);
 
     const toggleSources = () => {
         setShowSources(!showSources);
     };
+
+    const toggleThinking = () => {
+        setShowThinking(!showThinking);
+    };
+
+    // Extraer el bloque "think" del contenido
+    const extractThinkingBlock = (content) => {
+        if (typeof content !== 'string') return { mainContent: content, thinkingContent: null };
+
+        const thinkStartTag = "<think>";
+        const thinkEndTag = "</think>";
+        const startIndex = content.indexOf(thinkStartTag);
+        const endIndex = content.indexOf(thinkEndTag);
+
+        if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+            // Extraer el contenido del bloque think
+            const thinkingContent = content.substring(startIndex + thinkStartTag.length, endIndex).trim();
+
+            // Extraer el contenido principal (excluyendo el bloque think)
+            const beforeThink = content.substring(0, startIndex).trim();
+            const afterThink = content.substring(endIndex + thinkEndTag.length).trim();
+            const mainContent = (beforeThink + " " + afterThink).trim();
+
+            return { mainContent, thinkingContent };
+        }
+
+        return { mainContent: content, thinkingContent: null };
+    };
+
+    // Procesar el contenido para extraer bloques de pensamiento
+    const { mainContent, thinkingContent } = message.type === 'assistant'
+        ? extractThinkingBlock(message.content)
+        : { mainContent: message.content, thinkingContent: null };
 
     // Format timestamp
     const formatTimestamp = (isoString) => {
@@ -63,7 +97,7 @@ const ChatMessage = ({ message, theme }) => {
         },
         a({ node, children, href, ...props }) {
             return (
-                <a
+                <a  // <<< Add the opening tag here
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -209,17 +243,53 @@ const ChatMessage = ({ message, theme }) => {
                         <div className="whitespace-pre-wrap break-words mt-3 pr-10 chat-message-content"
                              style={{ letterSpacing: '-0.01em', lineHeight: '1.4' }}>
                             {message.type === 'user' ? (
-                                message.content
+                                mainContent
                             ) : (
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm, remarkMath]}
                                     rehypePlugins={[rehypeKatex]}
                                     components={components}
                                 >
-                                    {message.content}
+                                    {mainContent}
                                 </ReactMarkdown>
                             )}
                         </div>
+
+                        {/* Thinking block - desplegable */}
+                        {thinkingContent && (
+                            <div className={`mt-3 ${theme === 'dark' ? 'border-t border-gray-700' : 'border-t border-gray-200'}`}>
+                                <button
+                                    onClick={toggleThinking}
+                                    className={`flex items-center justify-between w-full py-2 px-1 text-sm font-medium ${
+                                        theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+                                    } transition-colors`}
+                                >
+                                    <span className="flex items-center">
+                                        <svg className={`w-4 h-4 mr-2 ${
+                                            theme === 'dark' ? 'text-purple-400' : 'text-purple-600'
+                                        }`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                  d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                                        </svg>
+                                        Proceso de pensamiento
+                                    </span>
+                                    <svg className={`w-5 h-5 transition-transform ${showThinking ? 'rotate-180' : ''}`}
+                                         fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </button>
+
+                                {showThinking && (
+                                    <div className={`p-3 rounded-md text-sm mt-1 mb-2 overflow-auto max-h-96 ${
+                                        theme === 'dark'
+                                            ? 'bg-gray-900 border border-gray-700 text-gray-300'
+                                            : 'bg-gray-50 border border-gray-200 text-gray-700'
+                                    }`} style={{ whiteSpace: 'pre-wrap' }}>
+                                        {thinkingContent}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Response type indicator */}
                         {message.type === 'assistant' && message.status === 'completed' && (
@@ -260,44 +330,72 @@ const ChatMessage = ({ message, theme }) => {
                             </div>
                         )}
 
-                        {/* Sources (only for completed assistant messages) */}
+                        {/* Sources (only for completed assistant messages) - Unificadas */}
                         {message.type === 'assistant' &&
                             message.status === 'completed' &&
                             message.sources &&
                             message.sources.length > 0 &&
                             showSources && (
                                 <div className={`mt-3 pt-2 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
-                                    <p className={`text-sm font-medium mb-1.5 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                                        Fuentes ({message.sources.length}):
-                                    </p>
-                                    <div className="space-y-2">
-                                        {message.sources.map((source, idx) => (
-                                            <div
-                                                key={idx}
-                                                className={`text-sm rounded-lg p-2 ${
-                                                    theme === 'dark'
-                                                        ? 'bg-gray-900 border border-gray-800'
-                                                        : 'bg-gray-50 border border-gray-200'
-                                                }`}
-                                                style={{ fontSize: '0.85rem', letterSpacing: '-0.01em' }}
-                                            >
-                                                <div className="flex flex-wrap justify-between items-start gap-2 mb-1">
-                                                    <span className="font-medium truncate">{source.source || 'Fuente desconocida'}</span>
-                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                                        theme === 'dark'
-                                                            ? 'bg-blue-900 text-blue-200'
-                                                            : 'bg-blue-100 text-blue-800'
-                                                    }`}>
-                                                      {typeof source.score === 'number' ? source.score.toFixed(2) : 'N/A'}
-                                                    </span>
-                                                </div>
-                                                <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} break-words`}
-                                                   style={{ lineHeight: '1.3' }}>
-                                                    {source.content}
+                                    {(() => {
+                                        // Crear un mapa para agrupar por fuente (uri o source)
+                                        const uniqueSources = new Map();
+
+                                        // Agrupar fuentes por URI o nombre de fuente
+                                        message.sources.forEach(source => {
+                                            const key = source.uri || source.source;
+
+                                            if (uniqueSources.has(key)) {
+                                                // Si ya existe esta fuente, actualizar el score si el nuevo es mayor
+                                                const existingSource = uniqueSources.get(key);
+                                                if (source.score > existingSource.score) {
+                                                    existingSource.score = source.score;
+                                                }
+                                            } else {
+                                                // Si es nueva, agregarla al mapa
+                                                uniqueSources.set(key, {...source});
+                                            }
+                                        });
+
+                                        // Convertir el mapa a array para renderizar
+                                        const uniqueSourcesArray = Array.from(uniqueSources.values());
+
+                                        return (
+                                            <>
+                                                <p className={`text-sm font-medium mb-1.5 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                                    Fuentes ({uniqueSourcesArray.length}):
                                                 </p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                                <div className="space-y-2">
+                                                    {uniqueSourcesArray.map((source, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className={`text-sm rounded-lg p-2 ${
+                                                                theme === 'dark'
+                                                                    ? 'bg-gray-900 border border-gray-800'
+                                                                    : 'bg-gray-50 border border-gray-200'
+                                                            }`}
+                                                            style={{ fontSize: '0.85rem', letterSpacing: '-0.01em' }}
+                                                        >
+                                                            <div className="flex flex-wrap justify-between items-start gap-2 mb-1">
+                                                                <span className="font-medium truncate">{source.source || 'Fuente desconocida'}</span>
+                                                                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                                    theme === 'dark'
+                                                                        ? 'bg-blue-900 text-blue-200'
+                                                                        : 'bg-blue-100 text-blue-800'
+                                                                }`}>
+                                                                    {typeof source.score === 'number' ? source.score.toFixed(2) : 'N/A'}
+                                                                </span>
+                                                            </div>
+                                                            <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} break-words`}
+                                                               style={{ lineHeight: '1.3' }}>
+                                                                {source.content || source.content_snippet}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                             )}
                     </div>
